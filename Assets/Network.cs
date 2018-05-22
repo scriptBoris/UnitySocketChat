@@ -45,14 +45,62 @@ public class Network : MonoBehaviour
                 int length = _stream.Read(buffer, 0, buffer.Length);
                 var incData = new byte[length];
 
-                Array.Copy(buffer, 0, incData, 0, length);
-                string serverMessage = Encoding.ASCII.GetString(incData);
+                //Array.Copy(buffer, 0, incData, 0, length);
+                //string jsonData = Encoding.ASCII.GetString(incData);
+                //print(jsonData);
 
-                //var msg = new Message();
-                //JsonUtility.FromJson<Message>(serverMessage);
-                var msg = JsonUtility.FromJson<Message>(serverMessage);
-                GetMessage(msg);
+                int space = 0;
+                while (space<99)
+                {
+                    if (Encoding.ASCII.GetString(new byte[] { buffer[space] }) == "{")
+                    {
+                        break;
+                    }
+                    space++;
+                }
+
+
+
+                if (space > 0 && space < 99)
+                {
+                    Array.Copy(buffer, space, incData, 0, length);
+                    string jsonData = Encoding.ASCII.GetString(incData);
+
+                    byte[] spaceBytes = new byte[space];
+                    for (int i = 0; i <= space-1; i++)
+                    {
+                        spaceBytes[i] = buffer[i];
+                    }
+
+                    int iJson = Convert.ToInt32(Encoding.ASCII.GetString(spaceBytes));
+                    var jsonType = (JsonTypes)iJson;
+
+                    ExtractData(jsonType, jsonData);
+                }
+                else if (space == 0)
+                {
+                    print("Not found type income JSON object");
+                }
+                else
+                    print("Bad incoming data from server");
             }
+        }
+    }
+    
+    private void ExtractData(JsonTypes jType, string data)
+    {
+        switch (jType)
+        {
+            case JsonTypes.Command:
+                break;
+            case JsonTypes.MediaPlan:
+                break;
+            case JsonTypes.MediaTemplate:
+                break;
+            case JsonTypes.Message:
+                var msg = JsonUtility.FromJson<Message>(data);
+                print(msg.Text);
+                break;
         }
     }
 
@@ -69,23 +117,17 @@ public class Network : MonoBehaviour
         //json.WriteObject(_stream, msg);
     }
 
-    private void GetMessage(Message msgIn)
-    {
-        _msg.Append(msgIn.Text);
-        _sender.Append(msgIn.Name);
-    }
-
     // Update is called once per frame
     void Update()
     {
         if (_msg.Length != 0)
         {
-            uText.text += "\n"+ _sender.ToString()+": "+ _msg.ToString();
-            print(_msg.ToString() );
+            uText.text += "\n" + _sender.ToString() + ": " + _msg.ToString();
+            print(_msg.ToString());
             _msg.Length = 0;
             _sender.Length = 0;
         }
-    } 
+    }
 
     // Dispose resources pre exit application
     void OnApplicationQuit()

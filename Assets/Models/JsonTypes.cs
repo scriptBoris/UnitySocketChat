@@ -5,7 +5,7 @@ using System.Text;
 
 public enum JsonTypes
 {
-    Message = 24,
+    Message,
     MediaPlan,
     MediaTemplate,
     Command,

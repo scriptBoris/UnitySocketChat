@@ -39,54 +39,62 @@ public class Network : MonoBehaviour
     {
         while (_isEnabled)
         {
-            if (_stream.DataAvailable)
+            byte[] buffer = new byte[1024];
+            int length = _stream.Read(buffer, 0, buffer.Length);
+            if (length > 0)
             {
-                byte[] buffer = new byte[1024];
-                int length = _stream.Read(buffer, 0, buffer.Length);
                 var incData = new byte[length];
 
-                //Array.Copy(buffer, 0, incData, 0, length);
-                //string jsonData = Encoding.ASCII.GetString(incData);
-                //print(jsonData);
+                var incFullData = new byte[length];
+                Array.Copy(buffer, 0, incFullData, 0, length);
+                string stringData = Encoding.ASCII.GetString(incFullData);
 
-                int space = 0;
-                while (space<99)
+                if (stringData[0] == '!')
                 {
-                    if (Encoding.ASCII.GetString(new byte[] { buffer[space] }) == "{")
-                    {
-                        break;
-                    }
-                    space++;
-                }
-
-
-
-                if (space > 0 && space < 99)
-                {
-                    Array.Copy(buffer, space, incData, 0, length);
-                    string jsonData = Encoding.ASCII.GetString(incData);
-
-                    byte[] spaceBytes = new byte[space];
-                    for (int i = 0; i <= space-1; i++)
-                    {
-                        spaceBytes[i] = buffer[i];
-                    }
-
-                    int iJson = Convert.ToInt32(Encoding.ASCII.GetString(spaceBytes));
-                    var jsonType = (JsonTypes)iJson;
-
-                    ExtractData(jsonType, jsonData);
-                }
-                else if (space == 0)
-                {
-                    print("Not found type income JSON object");
+                    // Получили простой сигнал-опрос от сервера. Так он знает что мы не отвалились или не ушли в Оффлайн
                 }
                 else
-                    print("Bad incoming data from server");
+                {
+                    int space = 0;
+                    while (space < 99)
+                    {
+                        if (incFullData[space] == '{')
+                        {
+                            break;
+                        }
+                        space++;
+                    }
+
+
+                    if (space > 0 && space < 99)
+                    {
+                        Array.Copy(buffer, space, incData, 0, length);
+                        string jsonData = Encoding.ASCII.GetString(incData);
+
+                        byte[] spaceBytes = new byte[space];
+                        for (int i = 0; i <= space - 1; i++)
+                        {
+                            spaceBytes[i] = buffer[i];
+                        }
+
+                        int iJson = Convert.ToInt32(Encoding.ASCII.GetString(spaceBytes));
+                        var jsonType = (JsonTypes)iJson;
+
+                        print(jsonType);
+
+                        ExtractData(jsonType, jsonData);
+                    }
+                    else if (space == 0)
+                    {
+                        print("Not found type income JSON object");
+                    }
+                    else
+                        print("Bad incoming data from server");
+                }
             }
         }
     }
-    
+
     private void ExtractData(JsonTypes jType, string data)
     {
         switch (jType)
@@ -99,7 +107,8 @@ public class Network : MonoBehaviour
                 break;
             case JsonTypes.Message:
                 var msg = JsonUtility.FromJson<Message>(data);
-                print(msg.Text);
+                _sender.Append(msg.Name);
+                _msg.Append(msg.Text);
                 break;
         }
     }

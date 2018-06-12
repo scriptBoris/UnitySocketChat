@@ -2,10 +2,12 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Net.Sockets;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using UnityEngine;
 using UnityEngine.UI;
+using UniRx;
 
 public class Network : MonoBehaviour
 {
@@ -97,6 +99,8 @@ public class Network : MonoBehaviour
 
     private void ExtractData(JsonTypes jType, string data)
     {
+
+
         switch (jType)
         {
             case JsonTypes.Command:
@@ -113,6 +117,8 @@ public class Network : MonoBehaviour
         }
     }
 
+    [Obsolete("Устаревший метод, который отправляет <<строгий>> тип данных. Используйте альтернативу" +
+        "SendData")]
     public void SendMessage(Message msgOut)
     {
         msgOut.Name = "Unity";
@@ -126,13 +132,38 @@ public class Network : MonoBehaviour
         //json.WriteObject(_stream, msg);
     }
 
+    public void SendData(System.Object obj)
+    {
+        var fields = new List<FieldInfo>(obj.GetType().GetFields());
+        foreach (var field in fields)
+        {
+            if (field != null && field.Name == "JsonType")
+            {
+                var sJson = (JsonTypes)field.GetValue(obj);
+                var iJson = (int)sJson;
+                var json = JsonUtility.ToJson(obj);
+                byte[] buffer = new byte[json.Length];
+                buffer = Encoding.ASCII.GetBytes(iJson + json);
+                _tcpClient.Client.Send(buffer);
+
+                return;
+            }
+        }
+        throw new Exception("SendData not found field with JSON enum");
+    }
+
+    void RenderIncommingMessage(string author, string message)
+    {
+        uText.text += "\n" + _sender.ToString() + ": " + _msg.ToString();
+    }
+
     // Update is called once per frame
     void Update()
     {
         if (_msg.Length != 0)
         {
-            uText.text += "\n" + _sender.ToString() + ": " + _msg.ToString();
-            print(_msg.ToString());
+            RenderIncommingMessage(_sender.ToString(), _msg.ToString());
+            print("update");
             _msg.Length = 0;
             _sender.Length = 0;
         }

@@ -21,7 +21,8 @@ public class ButtonSendMessage : MonoBehaviour
         {
             uInputField.text = "";
             var msg = new Message { Name="Unity",Text = text };
-            uNetwork.SendMessage(msg);
+            uNetwork.SendData(msg);
+            //uNetwork.SendMessage(msg);
         }
     }
 }
